@@ -42,6 +42,7 @@ type GroupReconciler struct {
 }
 
 //+kubebuilder:rbac:groups=user.openshift.io,resources=groups,verbs=get;list;watch;update;patch
+//+kubebuilder:rbac:groups=core,resources=secrets,verbs=get;list;watch
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
