@@ -6,28 +6,12 @@ metadata:
   name: manager-role
 rules:
 - apiGroups:
-  - user.openshift.io.github.oddbit.com
+  - user.openshift.io
   resources:
   - groups
   verbs:
-  - create
-  - delete
   - get
   - list
   - patch
   - update
   - watch
-- apiGroups:
-  - user.openshift.io.github.oddbit.com
-  resources:
-  - groups/finalizers
-  verbs:
-  - update
-- apiGroups:
-  - user.openshift.io.github.oddbit.com
-  resources:
-  - groups/status
-  verbs:
-  - get
-  - patch
-  - update

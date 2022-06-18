@@ -1,0 +1,11 @@
+apiVersion: user.openshift.io/v1
+kind: Group
+metadata:
+  name: example-group
+  labels:
+    github.oddbit.com/sync: "true"
+  annotations:
+    github.oddbit.com/secret: github-secret
+    github.oddbit.com/organization: example-org
+    github.oddbit.com/team: example-team
+users: []

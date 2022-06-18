@@ -8,8 +8,8 @@ projectName: github-team-sync
 repo: github.com/larsks/github-team-sync-operator
 resources:
 - controller: true
-  domain: github.oddbit.com
-  group: user.openshift.io
+  domain: openshift.io
+  group: user
   kind: Group
   version: v1
 version: "3"
