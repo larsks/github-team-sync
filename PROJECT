@@ -1,0 +1,15 @@
+domain: oddbit.com
+layout:
+- go.kubebuilder.io/v3
+plugins:
+  manifests.sdk.operatorframework.io/v2: {}
+  scorecard.sdk.operatorframework.io/v2: {}
+projectName: github-team-sync
+repo: github.com/larsks/github-team-sync-operator
+resources:
+- controller: true
+  domain: github.oddbit.com
+  group: user.openshift.io
+  kind: Group
+  version: v1
+version: "3"
