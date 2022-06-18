@@ -4,6 +4,14 @@ Synchronize group membership in OpenShift to team membership in GitHub.
 
 ## Description
 
+The github-team-sync-operator automatically synchronized OpenShift group membership to GitHub team membership. The operator looks for groups with the `github.oddbit.com/sync` label set to `"true"`. These groups must have the follow annotations:
+
+- `github.oddbit.com/secret`: The name of a secret that contains a `GITHUB_TOKEN` key with a GitHub personal access token with appropriate access to get team memberships.
+- `github.oddbit.com/organization`: The name of the organization to which the named team belongs.
+- `github.oddbit.com/team`: Synchronize membership with this team.
+
+An example `Group` might look like this:
+
 ```
 apiVersion: user.openshift.io/v1
 kind: Group
@@ -17,6 +25,8 @@ metadata:
     github.oddbit.com/team: example-team
 users: []
 ```
+
+The operator will run immediately whenever a group is created or modified; it will also run periodically (by default every 5 minutes).
 
 ## License
 
