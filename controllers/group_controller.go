@@ -37,8 +37,9 @@ import (
 // GroupReconciler reconciles a Group object
 type GroupReconciler struct {
 	client.Client
-	Scheme    *runtime.Scheme
-	Namespace string
+	Scheme      *runtime.Scheme
+	Namespace   string
+	GithubToken string
 }
 
 //+kubebuilder:rbac:groups=user.openshift.io,resources=groups,verbs=get;list;watch;update;patch
@@ -54,9 +55,7 @@ type GroupReconciler struct {
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.12.1/pkg/reconcile
 func (r *GroupReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	_ = log.FromContext(ctx)
-
-	reqlog := log.Log.WithValues("group", req.NamespacedName)
+	reqlog := log.FromContext(ctx)
 	reqlog.V(1).Info("Triggered")
 
 	var group userv1.Group
@@ -85,16 +84,39 @@ func (r *GroupReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 	return ctrl.Result{}, nil
 }
 
-func (r *GroupReconciler) SyncGroup(ctx context.Context, group *userv1.Group) error {
-	reqlog := log.Log.WithValues("group", group.ObjectMeta.Name)
+func (r *GroupReconciler) GithubTokenFromSecret(ctx context.Context, group *userv1.Group) (string, error) {
+	reqlog := log.FromContext(ctx)
 
+	var githubToken string
 	secretName := group.ObjectMeta.Annotations["github.oddbit.com/secret"]
+	if len(secretName) > 0 {
+		var secret corev1.Secret
+		if err := r.Get(ctx, client.ObjectKey{Namespace: r.Namespace, Name: secretName}, &secret); err != nil {
+			reqlog.Error(err, "Failed to get secret")
+			return "", err
+		}
+
+		githubToken = string(secret.Data["GITHUB_TOKEN"])
+	}
+
+	if len(githubToken) == 0 {
+		githubToken = r.GithubToken
+
+		if len(githubToken) == 0 {
+			return "", fmt.Errorf("Missing github token")
+		}
+
+		reqlog.V(1).Info("Using global token")
+	}
+
+	return githubToken, nil
+}
+
+func (r *GroupReconciler) SyncGroup(ctx context.Context, group *userv1.Group) error {
+	reqlog := log.FromContext(ctx)
+
 	orgName := group.ObjectMeta.Annotations["github.oddbit.com/organization"]
 	teamName := group.ObjectMeta.Annotations["github.oddbit.com/team"]
-
-	if len(secretName) == 0 {
-		return fmt.Errorf("group is missing oddbit.com/secret annotation")
-	}
 
 	if len(orgName) == 0 {
 		return fmt.Errorf("group is missing oddbit.com/organization annotation")
@@ -104,14 +126,13 @@ func (r *GroupReconciler) SyncGroup(ctx context.Context, group *userv1.Group) er
 		return fmt.Errorf("group is missing oddbit.com/team annotation")
 	}
 
-	var secret corev1.Secret
-	if err := r.Get(ctx, client.ObjectKey{Namespace: r.Namespace, Name: secretName}, &secret); err != nil {
-		reqlog.Error(err, "Failed to get secret")
+	githubToken, err := r.GithubTokenFromSecret(ctx, group)
+	if err != nil {
 		return err
 	}
 
 	ts := oauth2.StaticTokenSource(
-		&oauth2.Token{AccessToken: string(secret.Data["GITHUB_TOKEN"])},
+		&oauth2.Token{AccessToken: githubToken},
 	)
 	tc := oauth2.NewClient(ctx, ts)
 

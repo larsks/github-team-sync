@@ -100,10 +100,13 @@ func main() {
 		os.Exit(1)
 	}
 
+	githubToken := os.Getenv("GITHUB_TOKEN")
+
 	if err = (&controllers.GroupReconciler{
-		Client:    mgr.GetClient(),
-		Scheme:    mgr.GetScheme(),
-		Namespace: os.Getenv("GH_SYNC_NAMESPACE"),
+		Client:      mgr.GetClient(),
+		Scheme:      mgr.GetScheme(),
+		Namespace:   os.Getenv("GH_SYNC_NAMESPACE"),
+		GithubToken: githubToken,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Group")
 		os.Exit(1)

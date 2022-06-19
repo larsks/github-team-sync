@@ -6,9 +6,9 @@ Synchronize group membership in OpenShift to team membership in GitHub.
 
 The github-team-sync-operator automatically synchronized OpenShift group membership to GitHub team membership. The operator looks for groups with the `github.oddbit.com/sync` label set to `"true"`. These groups must have the follow annotations:
 
-- `github.oddbit.com/secret`: The name of a secret that contains a `GITHUB_TOKEN` key with a GitHub personal access token with appropriate access to get team memberships.
-- `github.oddbit.com/organization`: The name of the organization to which the named team belongs.
-- `github.oddbit.com/team`: Synchronize membership with this team.
+- `github.oddbit.com/organization` (required): The name of the organization to which the named team belongs.
+- `github.oddbit.com/team` (required): Synchronize membership with this team.
+- `github.oddbit.com/secret` (optional): The name of a secret that contains a `GITHUB_TOKEN` key with a GitHub personal access token with appropriate access to get team memberships. If this annotation is not available, github-team-sync will attempt to use the global token (see [Configuration](#configuration)).
 
 An example `Group` might look like this:
 
@@ -20,13 +20,19 @@ metadata:
   labels:
     github.oddbit.com/sync: "true"
   annotations:
-    github.oddbit.com/secret: github-secret
     github.oddbit.com/organization: example-org
     github.oddbit.com/team: example-team
 users: []
 ```
 
 The operator will run immediately whenever a group is created or modified; it will also run periodically (by default every 5 minutes).
+
+## Configuration
+
+Github-team-sync reads environment variables from the `ConfigMap` `github-team-sync-manager-config` and from the `Secret` `github-team-sync-manager-secret`. You may set the following keys:
+
+- `GITHUB_TOKEN`: A personal access token with permissions to read team memberships. This can be overridden per group.
+- `GH_SYNC_PERIOD`: How often to run the reconcile loop absent any changes. This default to 5 minutes. The value of this key will be read using [`time.ParseDuration`](https://pkg.go.dev/time#ParseDuration).
 
 ## License
 
