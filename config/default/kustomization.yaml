@@ -8,8 +8,14 @@ commonLabels:
   app.kubernetes.io/part-of: github-team-sync
 
 bases:
-- ../rbac
-- ../manager
+  - ../rbac
+  - ../manager
 
-patchesStrategicMerge:
-- manager_auth_proxy_patch.yaml
+patches:
+  - path: manager_auth_proxy_patch.yaml
+
+configMapGenerator:
+  - name: manager-config
+    behavior: replace
+    envs:
+      - manager-config.env
