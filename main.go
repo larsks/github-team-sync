@@ -74,6 +74,7 @@ func main() {
 	if err != nil {
 		syncPeriod = 5 * time.Minute
 	}
+	setupLog.WithValues("syncPeriod", syncPeriod).Info("Sync period")
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme:                 scheme,
