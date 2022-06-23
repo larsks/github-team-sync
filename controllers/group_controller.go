@@ -19,6 +19,7 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"sort"
 
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -155,6 +156,19 @@ func ListTeamMemberNames(ctx context.Context, gh *github.Client, orgName, teamNa
 	return memberNames, nil
 }
 
+// Compare two string slices, returning True if they both contain the same
+// items, regardless of order.
+func EqualIgnoringOrder(a, b []string) bool {
+	if len(a) != len(b) {
+		return false
+	}
+
+	sort.Strings(a)
+	sort.Strings(b)
+
+	return slices.Equal(a, b)
+}
+
 func (r *GroupReconciler) SyncGroup(ctx context.Context, group *userv1.Group) error {
 	reqlog := log.FromContext(ctx)
 
@@ -179,9 +193,9 @@ func (r *GroupReconciler) SyncGroup(ctx context.Context, group *userv1.Group) er
 		return err
 	}
 
-	if !slices.Equal(memberNames, group.Users) {
-		group.Users = memberNames
+	if !EqualIgnoringOrder(memberNames, group.Users) {
 		reqlog.Info("updating group membership")
+		group.Users = memberNames
 		if err := r.Update(ctx, group); err != nil {
 			return err
 		}
