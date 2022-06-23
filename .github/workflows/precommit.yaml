@@ -16,11 +16,6 @@ jobs:
         with:
           python-version: '^3.9'
 
-      - name: Setup Go
-        uses: actions/setup-go@v3
-        with:
-          go-version: '>= 1.18.0'
-
       - name: Configure caching
         uses: actions/cache@v2
         with:
@@ -34,3 +29,19 @@ jobs:
       - name: Run linters
         run: |
           pre-commit run --all-files
+
+  golangci:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v2
+
+      - name: Setup Go
+        uses: actions/setup-go@v3
+        with:
+          go-version: '>= 1.18.0'
+
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v3
+        with:
+          args: --timeout=5m

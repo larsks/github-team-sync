@@ -18,13 +18,3 @@ repos:
         files: \.(yaml|yml)$
         types: [file, yaml]
         entry: yamllint --strict
-
-  - repo: https://github.com/dnephin/pre-commit-golang
-    rev: f780b51bd3
-    hooks:
-      - id: go-fmt
-      - id: go-mod-tidy
-      - id: golangci-lint
-        args:
-          - --timeout=5m
-      - id: go-build
