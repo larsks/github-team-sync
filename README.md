@@ -32,7 +32,7 @@ The operator will run immediately whenever a group is created or modified; it wi
 Github-team-sync reads environment variables from the `ConfigMap` `github-team-sync-manager-config` and from the `Secret` `github-team-sync-manager-secret`. You may set the following keys:
 
 - `GITHUB_TOKEN`: A personal access token with permissions to read team memberships. This can be overridden per group.
-- `GH_SYNC_PERIOD`: How often to run the reconcile loop absent any changes. This default to 5 minutes. The value of this key will be read using [`time.ParseDuration`](https://pkg.go.dev/time#ParseDuration).
+- `GITHUB_SYNC_PERIOD`: How often to run the reconcile loop absent any changes. This default to 5 minutes. The value of this key will be read using [`time.ParseDuration`](https://pkg.go.dev/time#ParseDuration).
 
 ## License
 

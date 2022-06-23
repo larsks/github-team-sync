@@ -70,7 +70,7 @@ func main() {
 	flag.Parse()
 
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
-	syncPeriod, err := time.ParseDuration(os.Getenv("GH_SYNC_PERIOD"))
+	syncPeriod, err := time.ParseDuration(os.Getenv("GITHUB_SYNC_PERIOD"))
 	if err != nil {
 		syncPeriod = 5 * time.Minute
 	}
@@ -106,7 +106,7 @@ func main() {
 	if err = (&controllers.GroupReconciler{
 		Client:      mgr.GetClient(),
 		Scheme:      mgr.GetScheme(),
-		Namespace:   os.Getenv("GH_SYNC_NAMESPACE"),
+		Namespace:   os.Getenv("GITHUB_SYNC_NAMESPACE"),
 		GithubToken: githubToken,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Group")

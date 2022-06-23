@@ -25,7 +25,7 @@ spec:
         image: controller:latest
         name: manager
         env:
-        - name: GH_SYNC_NAMESPACE
+        - name: GITHUB_SYNC_NAMESPACE
           valueFrom:
             fieldRef:
               fieldPath: metadata.namespace
