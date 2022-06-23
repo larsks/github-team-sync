@@ -126,6 +126,35 @@ func (r *GroupReconciler) NewGithubClientFromToken(ctx context.Context, group *u
 	return github.NewClient(tc), nil
 }
 
+func ListTeamMemberNames(ctx context.Context, gh *github.Client, orgName, teamName string) ([]string, error) {
+	var members []*github.User
+
+	opts := github.TeamListTeamMembersOptions{
+		ListOptions: github.ListOptions{
+			PerPage: 30,
+		},
+	}
+
+	for {
+		page, resp, err := gh.Teams.ListTeamMembersBySlug(ctx, orgName, teamName, &opts)
+		if err != nil {
+			return nil, err
+		}
+		members = append(members, page...)
+		if resp.NextPage == 0 {
+			break
+		}
+		opts.Page = resp.NextPage
+	}
+
+	memberNames := []string{}
+	for _, member := range members {
+		memberNames = append(memberNames, member.GetLogin())
+	}
+
+	return memberNames, nil
+}
+
 func (r *GroupReconciler) SyncGroup(ctx context.Context, group *userv1.Group) error {
 	reqlog := log.FromContext(ctx)
 
@@ -145,14 +174,9 @@ func (r *GroupReconciler) SyncGroup(ctx context.Context, group *userv1.Group) er
 		return err
 	}
 
-	members, _, err := gh.Teams.ListTeamMembersBySlug(ctx, orgName, teamName, nil)
+	memberNames, err := ListTeamMemberNames(ctx, gh, orgName, teamName)
 	if err != nil {
 		return err
-	}
-
-	memberNames := []string{}
-	for _, member := range members {
-		memberNames = append(memberNames, member.GetLogin())
 	}
 
 	if !slices.Equal(memberNames, group.Users) {
