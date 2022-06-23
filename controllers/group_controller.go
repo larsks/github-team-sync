@@ -112,6 +112,20 @@ func (r *GroupReconciler) GithubTokenFromSecret(ctx context.Context, group *user
 	return githubToken, nil
 }
 
+func (r *GroupReconciler) NewGithubClientFromToken(ctx context.Context, group *userv1.Group) (*github.Client, error) {
+	githubToken, err := r.GithubTokenFromSecret(ctx, group)
+	if err != nil {
+		return nil, err
+	}
+
+	ts := oauth2.StaticTokenSource(
+		&oauth2.Token{AccessToken: githubToken},
+	)
+	tc := oauth2.NewClient(ctx, ts)
+
+	return github.NewClient(tc), nil
+}
+
 func (r *GroupReconciler) SyncGroup(ctx context.Context, group *userv1.Group) error {
 	reqlog := log.FromContext(ctx)
 
@@ -126,17 +140,10 @@ func (r *GroupReconciler) SyncGroup(ctx context.Context, group *userv1.Group) er
 		return fmt.Errorf("group is missing oddbit.com/team annotation")
 	}
 
-	githubToken, err := r.GithubTokenFromSecret(ctx, group)
+	gh, err := r.NewGithubClientFromToken(ctx, group)
 	if err != nil {
 		return err
 	}
-
-	ts := oauth2.StaticTokenSource(
-		&oauth2.Token{AccessToken: githubToken},
-	)
-	tc := oauth2.NewClient(ctx, ts)
-
-	gh := github.NewClient(tc)
 
 	members, _, err := gh.Teams.ListTeamMembersBySlug(ctx, orgName, teamName, nil)
 	if err != nil {
