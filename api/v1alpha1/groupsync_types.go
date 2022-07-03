@@ -20,22 +20,24 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
-// NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
-
 // GroupSyncSpec defines the desired state of GroupSync
-type GroupSyncSpec struct {
-	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
+type (
+	GithubToken struct {
+		Namespace string `json:"namespace"`
+		Secret    string `json:"secret"`
+	}
 
-	// Foo is an example field of GroupSync. Edit groupsync_types.go to remove/update
-	Foo string `json:"foo,omitempty"`
-}
+	GroupSyncSpec struct {
+		Organization string            `json:"organization"`
+		GithubToken  GithubToken       `json:"githubToken"`
+		Teams        map[string]string `json:"teams"`
+	}
+)
 
 // GroupSyncStatus defines the observed state of GroupSync
 type GroupSyncStatus struct {
-	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
+	LastSyncTime   string `json:"lastSyncTime"`
+	LastSyncStatus string `json:"lastSyncStatus"`
 }
 
 //+kubebuilder:object:root=true

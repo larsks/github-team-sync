@@ -9,7 +9,7 @@ repo: github.com/larsks/github-team-sync
 resources:
 - api:
     crdVersion: v1
-    namespaced: true
+    namespaced: false
   controller: true
   domain: oddbit.com
   group: github
