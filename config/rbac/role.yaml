@@ -6,6 +6,12 @@ metadata:
   name: manager-role
 rules:
 - apiGroups:
+  - ""
+  resources:
+  - Secret
+  verbs:
+  - get
+- apiGroups:
   - github.oddbit.com
   resources:
   - groupsyncs
