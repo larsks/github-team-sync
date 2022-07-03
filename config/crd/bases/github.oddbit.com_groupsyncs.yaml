@@ -46,6 +46,8 @@ spec:
                 type: object
               organization:
                 type: string
+              syncAllTeams:
+                type: boolean
               teams:
                 additionalProperties:
                   type: string
@@ -53,6 +55,7 @@ spec:
             required:
             - githubToken
             - organization
+            - syncAllTeams
             - teams
             type: object
           status:

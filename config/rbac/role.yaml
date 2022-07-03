@@ -31,3 +31,14 @@ rules:
   - get
   - patch
   - update
+- apiGroups:
+  - user.openshift.io
+  resources:
+  - Group
+  verbs:
+  - create
+  - get
+  - list
+  - patch
+  - update
+  - watch
