@@ -34,15 +34,15 @@ spec:
             type: object
           spec:
             properties:
-              githubToken:
+              githubTokenSecret:
                 properties:
+                  name:
+                    type: string
                   namespace:
                     type: string
-                  secret:
-                    type: string
                 required:
+                - name
                 - namespace
-                - secret
                 type: object
               organization:
                 type: string
@@ -53,9 +53,8 @@ spec:
                   type: string
                 type: object
             required:
-            - githubToken
+            - githubTokenSecret
             - organization
-            - syncAllTeams
             - teams
             type: object
           status:

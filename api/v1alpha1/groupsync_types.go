@@ -22,16 +22,16 @@ import (
 
 // GroupSyncSpec defines the desired state of GroupSync
 type (
-	GithubToken struct {
+	GithubTokenSecret struct {
 		Namespace string `json:"namespace"`
-		Secret    string `json:"secret"`
+		Name      string `json:"name"`
 	}
 
 	GroupSyncSpec struct {
-		Organization string            `json:"organization"`
-		GithubToken  GithubToken       `json:"githubToken"`
-		SyncAllTeams bool              `json:"syncAllTeams"`
-		Teams        map[string]string `json:"teams"`
+		Organization      string            `json:"organization"`
+		GithubTokenSecret GithubTokenSecret `json:"githubTokenSecret"`
+		SyncAllTeams      bool              `json:"syncAllTeams,omitempty"`
+		Teams             map[string]string `json:"teams"`
 	}
 )
 
