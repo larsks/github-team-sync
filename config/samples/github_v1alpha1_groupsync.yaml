@@ -1,0 +1,6 @@
+apiVersion: github.oddbit.com/v1alpha1
+kind: GroupSync
+metadata:
+  name: groupsync-sample
+spec:
+# TODO(user): Add fields here
