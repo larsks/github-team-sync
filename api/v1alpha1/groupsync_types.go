@@ -30,6 +30,7 @@ type (
 	GroupSyncSpec struct {
 		Organization string            `json:"organization"`
 		GithubToken  GithubToken       `json:"githubToken"`
+		SyncAllTeams bool              `json:"syncAllTeams"`
 		Teams        map[string]string `json:"teams"`
 	}
 )
