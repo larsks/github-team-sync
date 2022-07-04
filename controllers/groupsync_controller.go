@@ -35,6 +35,7 @@ import (
 	userv1 "github.com/openshift/api/user/v1"
 	"golang.org/x/exp/maps"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // GroupSyncReconciler reconciles a GroupSync object
@@ -120,17 +121,35 @@ func (r *GroupSyncReconciler) SyncTeams(ctx context.Context, gs *githubv1alpha1.
 func (r *GroupSyncReconciler) SetGroupMembership(ctx context.Context, groupName string, members []string) error {
 	reqlog := log.FromContext(ctx).WithValues("group", groupName)
 
-	var group userv1.Group
-	err := r.Get(ctx, types.NamespacedName{Name: groupName}, &group)
-	if err != nil {
+	group := userv1.Group{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "Group",
+			APIVersion: "user.openshift.io/v1",
+		},
+	}
+	group.Name = groupName
+	if err := ctrl.SetControllerReference(r.groupsync, &group, r.Scheme); err != nil {
 		return err
 	}
 
 	if !EqualIgnoringOrder(members, group.Users) {
 		reqlog.Info("updating group membership")
 		group.Users = members
-		if err := r.Update(ctx, &group); err != nil {
-			return err
+
+		var oldGroup userv1.Group
+		if err := r.Get(ctx, types.NamespacedName{Name: groupName}, &oldGroup); err != nil {
+			if errors.IsNotFound(err) {
+				if err := r.Create(ctx, &group); err != nil {
+					return err
+				}
+			} else {
+				return err
+			}
+		} else {
+			group.ObjectMeta.ResourceVersion = oldGroup.ObjectMeta.ResourceVersion
+			if err := r.Update(ctx, &group); err != nil {
+				return err
+			}
 		}
 	} else {
 		reqlog.Info("no changes to group membership")
@@ -174,6 +193,7 @@ func (r *GroupSyncReconciler) NewGithubClient(ctx context.Context, groupsync *gi
 func (r *GroupSyncReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&githubv1alpha1.GroupSync{}).
+		Owns(&userv1.Group{}).
 		Complete(r)
 }
 

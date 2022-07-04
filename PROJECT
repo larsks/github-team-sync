@@ -7,10 +7,7 @@ plugins:
 projectName: github-team-sync-operator
 repo: github.com/larsks/github-team-sync
 resources:
-- api:
-    crdVersion: v1
-    namespaced: false
-  controller: true
+- controller: true
   domain: oddbit.com
   group: github
   kind: GroupSync
