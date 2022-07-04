@@ -31,6 +31,7 @@ type (
 		Organization      string            `json:"organization"`
 		GithubTokenSecret GithubTokenSecret `json:"githubTokenSecret"`
 		SyncAllTeams      bool              `json:"syncAllTeams,omitempty"`
+		CreateGroups      bool              `json:"createGroups,omitempty"`
 		Teams             map[string]string `json:"teams"`
 	}
 )

@@ -18,19 +18,30 @@ package controllers
 
 import (
 	"context"
+	"sort"
 
+	"golang.org/x/oauth2"
+	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/utils/strings/slices"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
+	"github.com/google/go-github/v45/github"
 	githubv1alpha1 "github.com/larsks/github-team-sync/api/v1alpha1"
+	"github.com/larsks/github-team-sync/githubhelper"
+	userv1 "github.com/openshift/api/user/v1"
+	"golang.org/x/exp/maps"
+	corev1 "k8s.io/api/core/v1"
 )
 
 // GroupSyncReconciler reconciles a GroupSync object
 type GroupSyncReconciler struct {
 	client.Client
-	Scheme *runtime.Scheme
+	Scheme    *runtime.Scheme
+	groupsync *githubv1alpha1.GroupSync
 }
 
 //+kubebuilder:rbac:groups=github.oddbit.com,resources=groupsyncs,verbs=get;list;watch;create;update;patch;delete
@@ -41,19 +52,122 @@ type GroupSyncReconciler struct {
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
-// TODO(user): Modify the Reconcile function to compare the state specified by
-// the GroupSync object against the actual cluster state, and then
-// perform operations to make the cluster state reflect the state specified by
-// the user.
 //
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.12.1/pkg/reconcile
 func (r *GroupSyncReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	logger := log.FromContext(ctx)
+	reqlog := log.FromContext(ctx)
 
-	logger.Info("reconciling resources")
+	reqlog.Info("reconciling resources")
+
+	var groupsync githubv1alpha1.GroupSync
+	if err := r.Get(ctx, req.NamespacedName, &groupsync); err != nil {
+		if errors.IsNotFound(err) {
+			reqlog.Info("GroupSync resource has been deleted")
+			return ctrl.Result{}, nil
+		} else {
+			return ctrl.Result{}, err
+		}
+	}
+	r.groupsync = &groupsync
+
+	if err := r.SyncTeams(ctx, &groupsync); err != nil {
+		return ctrl.Result{}, err
+	}
 
 	return ctrl.Result{}, nil
+}
+
+func (r *GroupSyncReconciler) SyncTeams(ctx context.Context, gs *githubv1alpha1.GroupSync) error {
+	reqlog := log.FromContext(ctx)
+	gh, err := r.NewGithubClient(ctx, gs)
+	if err != nil {
+		return err
+	}
+
+	teams, err := GetTeamsToSync(ctx, gh, gs)
+	if err != nil {
+		return err
+	}
+
+	for _, teamName := range teams {
+		groupName := gs.Spec.Teams[teamName]
+		if len(groupName) == 0 {
+			groupName = teamName
+		}
+
+		reqlog := reqlog.WithValues("team", teamName, "group", groupName)
+
+		members, err := githubhelper.ListTeamMemberNames(ctx, gh, gs.Spec.Organization, teamName)
+		if err != nil {
+			return err
+		}
+		reqlog.WithValues("members", members).Info("found members for team")
+
+		if err := r.SetGroupMembership(ctx, groupName, members); err != nil {
+			if errors.IsNotFound(err) {
+				reqlog.Info("group not found (ignoring)")
+				continue
+			} else {
+				return err
+			}
+		}
+	}
+
+	return nil
+}
+
+func (r *GroupSyncReconciler) SetGroupMembership(ctx context.Context, groupName string, members []string) error {
+	reqlog := log.FromContext(ctx).WithValues("group", groupName)
+
+	var group userv1.Group
+	err := r.Get(ctx, types.NamespacedName{Name: groupName}, &group)
+	if err != nil {
+		return err
+	}
+
+	if !EqualIgnoringOrder(members, group.Users) {
+		reqlog.Info("updating group membership")
+		group.Users = members
+		if err := r.Update(ctx, &group); err != nil {
+			return err
+		}
+	} else {
+		reqlog.Info("no changes to group membership")
+	}
+
+	return nil
+}
+
+func (r *GroupSyncReconciler) GithubTokenFromSecret(ctx context.Context, groupsync *githubv1alpha1.GroupSync) (string, error) {
+	reqlog := log.FromContext(ctx)
+
+	var githubToken string
+	secretNamespace := groupsync.Spec.GithubTokenSecret.Namespace
+	secretName := groupsync.Spec.GithubTokenSecret.Name
+	var secret corev1.Secret
+	if err := r.Get(ctx, client.ObjectKey{Namespace: secretNamespace, Name: secretName}, &secret); err != nil {
+		reqlog.Error(err, "Failed to get secret")
+		return "", err
+	}
+
+	githubToken = string(secret.Data["GITHUB_TOKEN"])
+
+	return githubToken, nil
+}
+
+func (r *GroupSyncReconciler) NewGithubClient(ctx context.Context, groupsync *githubv1alpha1.GroupSync) (*github.Client, error) {
+	githubToken, err := r.GithubTokenFromSecret(ctx, groupsync)
+	if err != nil {
+		return nil, err
+	}
+
+	ts := oauth2.StaticTokenSource(
+		&oauth2.Token{AccessToken: githubToken},
+	)
+	tc := oauth2.NewClient(ctx, ts)
+
+	return github.NewClient(tc), nil
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -61,4 +175,32 @@ func (r *GroupSyncReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&githubv1alpha1.GroupSync{}).
 		Complete(r)
+}
+
+func GetTeamsToSync(ctx context.Context, gh *github.Client, gs *githubv1alpha1.GroupSync) ([]string, error) {
+	var teams []string
+	var err error
+	if gs.Spec.SyncAllTeams {
+		teams, err = githubhelper.ListTeams(ctx, gh, gs.Spec.Organization)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		teams = maps.Keys(gs.Spec.Teams)
+	}
+
+	return teams, nil
+}
+
+// Compare two string slices, returning True if they both contain the same
+// items, regardless of order.
+func EqualIgnoringOrder(a, b []string) bool {
+	if len(a) != len(b) {
+		return false
+	}
+
+	sort.Strings(a)
+	sort.Strings(b)
+
+	return slices.Equal(a, b)
 }

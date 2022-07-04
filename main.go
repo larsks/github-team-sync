@@ -33,7 +33,9 @@ import (
 
 	githubv1alpha1 "github.com/larsks/github-team-sync/api/v1alpha1"
 	"github.com/larsks/github-team-sync/controllers"
+
 	//+kubebuilder:scaffold:imports
+	userv1 "github.com/openshift/api/user/v1"
 )
 
 var (
@@ -45,6 +47,7 @@ func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 
 	utilruntime.Must(githubv1alpha1.AddToScheme(scheme))
+	utilruntime.Must(userv1.AddToScheme(scheme))
 	//+kubebuilder:scaffold:scheme
 }
 
