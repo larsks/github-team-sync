@@ -119,14 +119,26 @@ func (r *GroupSyncReconciler) SyncTeams(ctx context.Context, gs *githubv1alpha1.
 
 func (r *GroupSyncReconciler) SetGroupMembership(ctx context.Context, groupName string, members []string) error {
 	reqlog := log.FromContext(ctx).WithValues("group", groupName)
+	reqlog.Info("reconciling group membership")
 
-	group := userv1.Group{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "Group",
-			APIVersion: "user.openshift.io/v1",
-		},
+	var group userv1.Group
+	var createGroup bool
+
+	if err := r.Get(ctx, types.NamespacedName{Name: groupName}, &group); err != nil {
+		if errors.IsNotFound(err) {
+			createGroup = true
+			group = userv1.Group{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "Group",
+					APIVersion: "user.openshift.io/v1",
+				},
+			}
+			group.Name = groupName
+		} else {
+			return err
+		}
 	}
-	group.Name = groupName
+
 	if err := ctrl.SetControllerReference(r.groupsync, &group, r.Scheme); err != nil {
 		return err
 	}
@@ -134,21 +146,16 @@ func (r *GroupSyncReconciler) SetGroupMembership(ctx context.Context, groupName 
 	if !EqualIgnoringOrder(members, group.Users) {
 		reqlog.Info("updating group membership")
 		group.Users = members
+		var err error
 
-		var oldGroup userv1.Group
-		if err := r.Get(ctx, types.NamespacedName{Name: groupName}, &oldGroup); err != nil {
-			if errors.IsNotFound(err) {
-				if err := r.Create(ctx, &group); err != nil {
-					return err
-				}
-			} else {
-				return err
-			}
+		if createGroup {
+			err = r.Create(ctx, &group)
 		} else {
-			group.ObjectMeta.ResourceVersion = oldGroup.ObjectMeta.ResourceVersion
-			if err := r.Update(ctx, &group); err != nil {
-				return err
-			}
+			err = r.Update(ctx, &group)
+		}
+
+		if err != nil {
+			return err
 		}
 	} else {
 		reqlog.Info("no changes to group membership")
