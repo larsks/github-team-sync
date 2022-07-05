@@ -39,8 +39,7 @@ import (
 // GroupSyncReconciler reconciles a GroupSync object
 type GroupSyncReconciler struct {
 	client.Client
-	Scheme    *runtime.Scheme
-	groupsync *githubv1alpha1.GroupSync
+	Scheme *runtime.Scheme
 }
 
 //+kubebuilder:rbac:groups=github.oddbit.com,resources=groupsyncs,verbs=get;list;watch;create;update;patch;delete
@@ -57,7 +56,7 @@ type GroupSyncReconciler struct {
 func (r *GroupSyncReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	reqlog := log.FromContext(ctx)
 
-	reqlog.Info("reconciling resources")
+	reqlog.Info("start reconcile loop")
 
 	var groupsync githubv1alpha1.GroupSync
 	if err := r.Get(ctx, req.NamespacedName, &groupsync); err != nil {
@@ -68,7 +67,6 @@ func (r *GroupSyncReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 			return ctrl.Result{}, err
 		}
 	}
-	r.groupsync = &groupsync
 
 	if err := r.SyncTeams(ctx, &groupsync); err != nil {
 		return ctrl.Result{}, err
@@ -109,7 +107,7 @@ func (r *GroupSyncReconciler) SyncTeams(ctx context.Context, gs *githubv1alpha1.
 		}
 		reqlog.WithValues("members", members).Info("found members for team")
 
-		if err := r.SetGroupMembership(ctx, groupName, members); err != nil {
+		if err := r.SetGroupMembership(ctx, gs, groupName, members); err != nil {
 			if errors.IsNotFound(err) {
 				reqlog.Info("group not found (ignoring)")
 				continue
@@ -122,7 +120,7 @@ func (r *GroupSyncReconciler) SyncTeams(ctx context.Context, gs *githubv1alpha1.
 	return nil
 }
 
-func (r *GroupSyncReconciler) SetGroupMembership(ctx context.Context, groupName string, members []string) error {
+func (r *GroupSyncReconciler) SetGroupMembership(ctx context.Context, gs *githubv1alpha1.GroupSync, groupName string, members []string) error {
 	reqlog := log.FromContext(ctx).WithValues("group", groupName)
 	reqlog.Info("reconciling group membership")
 
@@ -144,7 +142,7 @@ func (r *GroupSyncReconciler) SetGroupMembership(ctx context.Context, groupName 
 		}
 	}
 
-	if err := ctrl.SetControllerReference(r.groupsync, &group, r.Scheme); err != nil {
+	if err := ctrl.SetControllerReference(gs, &group, r.Scheme); err != nil {
 		return err
 	}
 

@@ -21,48 +21,54 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 )
 
-// GroupSyncSpec defines the desired state of GroupSync
 type (
 	GithubTokenSecret struct {
 		Namespace string `json:"namespace"`
 		Name      string `json:"name"`
 	}
 
+	// GroupSyncSpec defines the desired state of GroupSync
 	GroupSyncSpec struct {
-		Organization      string               `json:"organization"`
-		GithubTokenSecret types.NamespacedName `json:"githubTokenSecret"`
-		SyncAllTeams      bool                 `json:"syncAllTeams,omitempty"`
-		CreateGroups      bool                 `json:"createGroups,omitempty"`
-		Teams             map[string]string    `json:"teams"`
+		Organization      string            `json:"organization"`
+		GithubTokenSecret GithubTokenSecret `json:"githubTokenSecret"`
+		SyncAllTeams      bool              `json:"syncAllTeams,omitempty"`
+		Teams             map[string]string `json:"teams"`
+	}
+
+	// GroupSyncStatus defines the observed state of GroupSync
+	GroupSyncStatus struct {
+		LastSyncTime   string `json:"lastSyncTime"`
+		LastSyncStatus string `json:"lastSyncStatus"`
+	}
+
+	//+kubebuilder:object:root=true
+	//+kubebuilder:resource:scope=Cluster
+	//+kubebuilder:subresource:status
+
+	// GroupSync is the Schema for the groupsyncs API
+	GroupSync struct {
+		metav1.TypeMeta   `json:",inline"`
+		metav1.ObjectMeta `json:"metadata,omitempty"`
+
+		Spec   GroupSyncSpec   `json:"spec,omitempty"`
+		Status GroupSyncStatus `json:"status,omitempty"`
+	}
+
+	//+kubebuilder:object:root=true
+
+	// GroupSyncList contains a list of GroupSync
+	GroupSyncList struct {
+		metav1.TypeMeta `json:",inline"`
+		metav1.ListMeta `json:"metadata,omitempty"`
+		Items           []GroupSync `json:"items"`
 	}
 )
 
-// GroupSyncStatus defines the observed state of GroupSync
-type GroupSyncStatus struct {
-	LastSyncTime   string `json:"lastSyncTime"`
-	LastSyncStatus string `json:"lastSyncStatus"`
-}
-
-//+kubebuilder:object:root=true
-//+kubebuilder:resource:scope=Cluster
-//+kubebuilder:subresource:status
-
-// GroupSync is the Schema for the groupsyncs API
-type GroupSync struct {
-	metav1.TypeMeta   `json:",inline"`
-	metav1.ObjectMeta `json:"metadata,omitempty"`
-
-	Spec   GroupSyncSpec   `json:"spec,omitempty"`
-	Status GroupSyncStatus `json:"status,omitempty"`
-}
-
-//+kubebuilder:object:root=true
-
-// GroupSyncList contains a list of GroupSync
-type GroupSyncList struct {
-	metav1.TypeMeta `json:",inline"`
-	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []GroupSync `json:"items"`
+func (ght GithubTokenSecret) AsNamespacedName() types.NamespacedName {
+	return types.NamespacedName{
+		Name:      ght.Name,
+		Namespace: ght.Namespace,
+	}
 }
 
 func init() {
