@@ -4,7 +4,23 @@ import (
 	"context"
 
 	"github.com/google/go-github/v45/github"
+	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	corev1 "k8s.io/api/core/v1"
 )
+
+func GithubTokenFromSecret(ctx context.Context, client client.Client, secretName types.NamespacedName) (string, error) {
+	var githubToken string
+	var secret corev1.Secret
+	if err := client.Get(ctx, secretName, &secret); err != nil {
+		return "", err
+	}
+
+	githubToken = string(secret.Data["GITHUB_TOKEN"])
+
+	return githubToken, nil
+}
 
 func ListTeamMemberNames(ctx context.Context, gh *github.Client, orgName, teamName string) ([]string, error) {
 	var members []*github.User

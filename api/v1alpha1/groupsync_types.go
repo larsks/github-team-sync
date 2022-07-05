@@ -18,6 +18,7 @@ package v1alpha1
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 )
 
 // GroupSyncSpec defines the desired state of GroupSync
@@ -28,11 +29,11 @@ type (
 	}
 
 	GroupSyncSpec struct {
-		Organization      string            `json:"organization"`
-		GithubTokenSecret GithubTokenSecret `json:"githubTokenSecret"`
-		SyncAllTeams      bool              `json:"syncAllTeams,omitempty"`
-		CreateGroups      bool              `json:"createGroups,omitempty"`
-		Teams             map[string]string `json:"teams"`
+		Organization      string               `json:"organization"`
+		GithubTokenSecret types.NamespacedName `json:"githubTokenSecret"`
+		SyncAllTeams      bool                 `json:"syncAllTeams,omitempty"`
+		CreateGroups      bool                 `json:"createGroups,omitempty"`
+		Teams             map[string]string    `json:"teams"`
 	}
 )
 

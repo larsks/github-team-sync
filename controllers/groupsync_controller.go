@@ -34,7 +34,6 @@ import (
 	"github.com/larsks/github-team-sync/githubhelper"
 	userv1 "github.com/openshift/api/user/v1"
 	"golang.org/x/exp/maps"
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -158,25 +157,8 @@ func (r *GroupSyncReconciler) SetGroupMembership(ctx context.Context, groupName 
 	return nil
 }
 
-func (r *GroupSyncReconciler) GithubTokenFromSecret(ctx context.Context, groupsync *githubv1alpha1.GroupSync) (string, error) {
-	reqlog := log.FromContext(ctx)
-
-	var githubToken string
-	secretNamespace := groupsync.Spec.GithubTokenSecret.Namespace
-	secretName := groupsync.Spec.GithubTokenSecret.Name
-	var secret corev1.Secret
-	if err := r.Get(ctx, client.ObjectKey{Namespace: secretNamespace, Name: secretName}, &secret); err != nil {
-		reqlog.Error(err, "Failed to get secret")
-		return "", err
-	}
-
-	githubToken = string(secret.Data["GITHUB_TOKEN"])
-
-	return githubToken, nil
-}
-
 func (r *GroupSyncReconciler) NewGithubClient(ctx context.Context, groupsync *githubv1alpha1.GroupSync) (*github.Client, error) {
-	githubToken, err := r.GithubTokenFromSecret(ctx, groupsync)
+	githubToken, err := githubhelper.GithubTokenFromSecret(ctx, r.Client, groupsync.Spec.GithubTokenSecret)
 	if err != nil {
 		return nil, err
 	}
