@@ -20,7 +20,6 @@ import (
 	"context"
 	"sort"
 
-	"golang.org/x/oauth2"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -80,7 +79,13 @@ func (r *GroupSyncReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 
 func (r *GroupSyncReconciler) SyncTeams(ctx context.Context, gs *githubv1alpha1.GroupSync) error {
 	reqlog := log.FromContext(ctx)
-	gh, err := r.NewGithubClient(ctx, gs)
+
+	ght, err := githubhelper.GithubTokenFromSecret(ctx, r.Client, gs.Spec.GithubTokenSecret.AsNamespacedName())
+	if err != nil {
+		return err
+	}
+
+	gh, err := githubhelper.NewGithubClient(ctx, ght)
 	if err != nil {
 		return err
 	}
@@ -162,20 +167,6 @@ func (r *GroupSyncReconciler) SetGroupMembership(ctx context.Context, groupName 
 	}
 
 	return nil
-}
-
-func (r *GroupSyncReconciler) NewGithubClient(ctx context.Context, groupsync *githubv1alpha1.GroupSync) (*github.Client, error) {
-	githubToken, err := githubhelper.GithubTokenFromSecret(ctx, r.Client, groupsync.Spec.GithubTokenSecret)
-	if err != nil {
-		return nil, err
-	}
-
-	ts := oauth2.StaticTokenSource(
-		&oauth2.Token{AccessToken: githubToken},
-	)
-	tc := oauth2.NewClient(ctx, ts)
-
-	return github.NewClient(tc), nil
 }
 
 // SetupWithManager sets up the controller with the Manager.

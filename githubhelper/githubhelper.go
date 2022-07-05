@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/google/go-github/v45/github"
+	"golang.org/x/oauth2"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -20,6 +21,15 @@ func GithubTokenFromSecret(ctx context.Context, client client.Client, secretName
 	githubToken = string(secret.Data["GITHUB_TOKEN"])
 
 	return githubToken, nil
+}
+
+func NewGithubClient(ctx context.Context, token string) (*github.Client, error) {
+	ts := oauth2.StaticTokenSource(
+		&oauth2.Token{AccessToken: token},
+	)
+	tc := oauth2.NewClient(ctx, ts)
+
+	return github.NewClient(tc), nil
 }
 
 func ListTeamMemberNames(ctx context.Context, gh *github.Client, orgName, teamName string) ([]string, error) {
